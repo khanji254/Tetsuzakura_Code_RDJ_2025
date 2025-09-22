@@ -185,7 +185,7 @@ int runCommand() {
     else if (arg2 == 1) pinMode(arg1, OUTPUT);
     Serial.println("OK");
     break;
-  case PING:
+  case PING_BOT:
     Serial.println(Ping(arg1, arg2)); // Now expects trigPin, echoPin
     break;
 #ifdef USE_SERVOS

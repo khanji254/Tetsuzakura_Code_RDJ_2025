@@ -2,7 +2,9 @@
 #define SERVOS_H
 
 #define N_SERVOS 2
-
+#include <Arduino.h>
+#include "config.h"
+#include <Servo.h>
 // Servo indexes for clarity
 #define CAMERA_SERVO_INDEX 0
 #define TIPPER_SERVO_INDEX 1
@@ -38,5 +40,6 @@ class SweepServo
 };
 
 SweepServo servos [N_SERVOS];
-
+void initAllServos();
+void sweepAllServos();
 #endif
