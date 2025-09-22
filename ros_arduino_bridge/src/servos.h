@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include "config.h"
 #include <Servo.h>
+
 // Servo indexes for clarity
 #define CAMERA_SERVO_INDEX 0
 #define TIPPER_SERVO_INDEX 1
@@ -29,6 +30,7 @@ class SweepServo
         int initPosition);
     void doSweep();
     void setTargetPosition(int position);
+    void setTargetPositionWithSpeed(int position, int speedMsPerDeg); // <-- Added declaration
     Servo getServo();
 
   private:
@@ -42,4 +44,6 @@ class SweepServo
 SweepServo servos [N_SERVOS];
 void initAllServos();
 void sweepAllServos();
+void setServoAngleWithSpeed(uint8_t index, int targetAngle, int speed);
+
 #endif

@@ -198,6 +198,25 @@ int runCommand() {
   case SERVO_READ:
     Serial.println(servos[arg1].getServo().read());
     break;
+  case SERVO_WRITE_SPEED: // w <index> <angle> <speed>
+    {
+      int idx = atoi(argv1);
+      int angle = atoi(argv2);
+      // Read speed from serial (third argument)
+      int speed = 10; // default speed
+      char buf[8] = {0};
+      int bidx = 0;
+      while (Serial.available() > 0 && bidx < 7) {
+        char c = Serial.read();
+        if (c == 13 || c == ' ') break;
+        buf[bidx++] = c;
+      }
+      buf[bidx] = 0;
+      if (bidx > 0) speed = atoi(buf);
+      setServoAngleWithSpeed(idx, angle, speed);
+      Serial.println("OK");
+    }
+    break;    
 #endif
 
 #ifdef USE_BASE
@@ -267,7 +286,18 @@ int runCommand() {
         handleStepperCommand(rpm, distance, flag);
         Serial.println("OK");
         break;
-    }    
+    }  
+    case COLOR_READ: // Color sensor command
+        readColorSensor();
+        break;
+    case ULTRASONIC_READ: // Ultrasonic sensor command, returns both left and right in cm
+     {
+    long left = Ping(ULTRASONIC_LEFT_TRIG_PIN, ULTRASONIC_LEFT_ECHO_PIN);
+    long right = Ping(ULTRASONIC_RIGHT_TRIG_PIN, ULTRASONIC_RIGHT_ECHO_PIN);
+    Serial.print(left); Serial.print(" "); Serial.println(right);
+    break;
+    }
+    
   case UPDATE_PID:
     while ((str = strtok_r(p, ":", &p)) != nullptr) {
        pid_args[i] = atoi(str);
@@ -317,8 +347,9 @@ void setup() {
     // // enable PCINT1 and PCINT2 interrupt in the general interrupt mask
     // PCICR |= (1 << PCIE1) | (1 << PCIE2);
   #endif
-
+  
   initializeEncoders();
+  initializeColorSensor();
   initMotorControllerTB6612();
   resetPID();
   initializeStepper();

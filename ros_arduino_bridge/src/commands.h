@@ -10,10 +10,13 @@
 #define PIN_MODE           'c'
 #define DIGITAL_READ       'd'
 #define READ_ENCODERS      'e'
+#define SERVO_WRITE_SPEED  'f'  // w <index> <angle> <speed>
 #define MOTOR_SPEEDS       'm'  // Set all 4 motor speeds
 #define MOTOR_RAW_PWM      'o'
 #define PING_BOT           'p'
-#define STEPPER           'q'
+#define STEPPER            'q'
+#define ULTRASONIC_READ    'U'  // New command for ultrasonic sensor reading
+#define COLOR_READ         'v'
 #define RESET_ENCODERS     'r'
 #define SERVO_WRITE        's'
 #define SERVO_READ         't'

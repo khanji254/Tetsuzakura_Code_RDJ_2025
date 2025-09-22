@@ -21,6 +21,7 @@ SweepServo::SweepServo()
   this->currentPositionDegrees = 0;
   this->targetPositionDegrees = 0;
   this->lastSweepCommand = 0;
+  this->stepDelayMs = 10;
 }
 
 // Init
@@ -67,6 +68,13 @@ void SweepServo::setTargetPosition(int position)
   this->targetPositionDegrees = position;
 }
 
+// Set a new target position and speed (ms per degree)
+void SweepServo::setTargetPositionWithSpeed(int position, int speedMsPerDeg)
+{
+  this->targetPositionDegrees = position;
+  this->stepDelayMs = speedMsPerDeg;
+}
+
 // Accessor for servo object
 Servo SweepServo::getServo()
 {
@@ -79,6 +87,11 @@ void initAllServos() {
   for (int i = 0; i < N_SERVOS; i++) {
     servos[i].initServo(servoPins[i], stepDelay[i], servoInitPosition[i]);
   }
+}
+
+void setServoAngleWithSpeed(uint8_t index, int targetAngle, int speedMsPerDeg) {
+  if (index >= N_SERVOS) return;
+  servos[index].setTargetPositionWithSpeed(targetAngle, speedMsPerDeg);
 }
 
 void sweepAllServos() {
