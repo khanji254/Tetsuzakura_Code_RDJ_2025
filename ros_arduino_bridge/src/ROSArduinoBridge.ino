@@ -88,6 +88,7 @@
 #include "sensors.h"
 #include "encoder_driver.h"
 #include "stepper_driver.h"
+#include "imu.h"
 
 /* Sensor functions */
 #include "sensors.h"
@@ -269,6 +270,10 @@ int runCommand() {
       }
     }
     break;
+    case GET_IMU_ANGLE: // IMU Z angle command
+       Serial.println(readIMUZAngle());
+     break;
+
     case STEPPER: {
         // Example: q -25:400:0
         int rpm = 0, distance = 0, flag = 0;
@@ -352,6 +357,7 @@ void setup() {
   initializeColorSensor();
   initMotorControllerTB6612();
   resetPID();
+  initializeIMU();
   initializeStepper();
 #endif
 
