@@ -4,6 +4,8 @@
    http://vanadium-ros-pkg.googlecode.com/svn/trunk/arbotix/
 */
 #include "config.h"
+#include "encoder_driver.h"  // <-- Ensure you include the new encoder driver
+
 #define FRONT_LEFT   0
 #define FRONT_RIGHT  1
 #define REAR_LEFT    2
@@ -37,30 +39,30 @@ unsigned char moving = 0; // is the base in motion?
 * Note that the assumption here is that PID is only turned on
 * when going from stop to moving, that's why we can init everything on zero.
 */
-void resetPID_4motor(){
+void resetPID(){
    flPID.TargetTicksPerFrame = 0.0;
-   flPID.Encoder = readEncoder(FRONT_LEFT);
+   flPID.Encoder = getM1Encoder();
    flPID.PrevEnc = flPID.Encoder;
    flPID.output = 0;
    flPID.PrevInput = 0;
    flPID.ITerm = 0;
 
    frPID.TargetTicksPerFrame = 0.0;
-   frPID.Encoder = readEncoder(FRONT_RIGHT);
+   frPID.Encoder = getM2Encoder();
    frPID.PrevEnc = frPID.Encoder;
    frPID.output = 0;
    frPID.PrevInput = 0;
    frPID.ITerm = 0;
 
    rlPID.TargetTicksPerFrame = 0.0;
-   rlPID.Encoder = readEncoder(REAR_LEFT);
+   rlPID.Encoder = getM3Encoder();
    rlPID.PrevEnc = rlPID.Encoder;
    rlPID.output = 0;
    rlPID.PrevInput = 0;
    rlPID.ITerm = 0;
 
    rrPID.TargetTicksPerFrame = 0.0;
-   rrPID.Encoder = readEncoder(REAR_RIGHT);
+   rrPID.Encoder = getM4Encoder();
    rrPID.PrevEnc = rrPID.Encoder;
    rrPID.output = 0;
    rrPID.PrevInput = 0;
@@ -92,14 +94,14 @@ void doPID_4motor(SetPointInfo * p) {
 }
 
 /* Read the encoder values and call the PID routine */
-void updatePID_4motor() {
-  flPID.Encoder = readEncoder(FRONT_LEFT);
-  frPID.Encoder = readEncoder(FRONT_RIGHT);
-  rlPID.Encoder = readEncoder(REAR_LEFT);
-  rrPID.Encoder = readEncoder(REAR_RIGHT);
+void updatePID() {
+  flPID.Encoder = getM1Encoder();
+  frPID.Encoder = getM2Encoder();
+  rlPID.Encoder = getM3Encoder();
+  rrPID.Encoder = getM4Encoder();
 
   if (!moving){
-    if (flPID.PrevInput != 0 || frPID.PrevInput != 0 || rlPID.PrevInput != 0 || rrPID.PrevInput != 0) resetPID_4motor();
+    if (flPID.PrevInput != 0 || frPID.PrevInput != 0 || rlPID.PrevInput != 0 || rrPID.PrevInput != 0) resetPID();
     return;
   }
 

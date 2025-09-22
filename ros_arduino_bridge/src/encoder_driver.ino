@@ -9,73 +9,95 @@
    
 #ifdef USE_BASE
 
-#ifdef ROBOGAIA
-  /* The Robogaia Mega Encoder shield */
-  #include "MegaEncoderCounter.h"
+#include "encoder_driver.h"
+#include "config.h"
 
-  /* Create the encoder shield object */
-  MegaEncoderCounter encoders = MegaEncoderCounter(4); // Initializes the Mega Encoder Counter in the 4X Count mode
-  
-  /* Wrap the encoder reading function */
-  long readEncoder(int i) {
-    if (i == LEFT) return encoders.YAxisGetCount();
-    else return encoders.XAxisGetCount();
-  }
+// Encoder count variables
+volatile long encCount1 = 0, encCount2 = 0, encCount3 = 0, encCount4 = 0;
 
-  /* Wrap the encoder reset function */
-  void resetEncoder(int i) {
-    if (i == LEFT) return encoders.YAxisReset();
-    else return encoders.XAxisReset();
-  }
-#elif defined(ARDUINO_ENC_COUNTER)
-  volatile long left_enc_pos = 0L;
-  volatile long right_enc_pos = 0L;
-  static const int8_t ENC_STATES [] = {0,1,-1,0,-1,0,0,1,1,0,0,-1,0,-1,1,0};  //encoder lookup table
-    
-  /* Interrupt routine for LEFT encoder, taking care of actual counting */
-  ISR (PCINT2_vect){
-  	static uint8_t enc_last=0;
-        
-	enc_last <<=2; //shift previous state two places
-	enc_last |= (PIND & (3 << 2)) >> 2; //read the current state into lowest 2 bits
-  
-  	left_enc_pos += ENC_STATES[(enc_last & 0x0f)];
-  }
-  
-  /* Interrupt routine for RIGHT encoder, taking care of actual counting */
-  ISR (PCINT1_vect){
-        static uint8_t enc_last=0;
-          	
-	enc_last <<=2; //shift previous state two places
-	enc_last |= (PINC & (3 << 4)) >> 4; //read the current state into lowest 2 bits
-  
-  	right_enc_pos += ENC_STATES[(enc_last & 0x0f)];
-  }
-  
-  /* Wrap the encoder reading function */
-  long readEncoder(int i) {
-    if (i == LEFT) return left_enc_pos;
-    else return right_enc_pos;
-  }
+// Encoder ISRs
+void ISR_enc1() { 
+  bool b = digitalRead(ENC1_B_PIN); 
+  if (b) encCount1++; 
+  else encCount1--; 
+}
 
-  /* Wrap the encoder reset function */
-  void resetEncoder(int i) {
-    if (i == LEFT){
-      left_enc_pos=0L;
-      return;
-    } else { 
-      right_enc_pos=0L;
-      return;
-    }
-  }
-#else
-  #error A encoder driver must be selected!
-#endif
+void ISR_enc2() { 
+  bool b = digitalRead(ENC2_B_PIN); 
+  if (b) encCount2++; 
+  else encCount2--; 
+}
 
-/* Wrap the encoder reset function */
+void ISR_enc3() { 
+  bool b = digitalRead(ENC3_B_PIN); 
+  if (b) encCount3++; 
+  else encCount3--; 
+}
+
+void ISR_enc4() { 
+  bool b = digitalRead(ENC4_B_PIN); 
+  if (b) encCount4++; 
+  else encCount4--; 
+}
+
+// Initialization
+void initializeEncoders() {
+  pinMode(ENC1_A_PIN, INPUT_PULLUP); 
+  pinMode(ENC1_B_PIN, INPUT_PULLUP);
+  pinMode(ENC2_A_PIN, INPUT_PULLUP); 
+  pinMode(ENC2_B_PIN, INPUT_PULLUP);
+  pinMode(ENC3_A_PIN, INPUT_PULLUP); 
+  pinMode(ENC3_B_PIN, INPUT_PULLUP);
+  pinMode(ENC4_A_PIN, INPUT_PULLUP); 
+  pinMode(ENC4_B_PIN, INPUT_PULLUP);
+
+  attachInterrupt(digitalPinToInterrupt(ENC1_A_PIN), ISR_enc1, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC2_A_PIN), ISR_enc2, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC3_A_PIN), ISR_enc3, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC4_A_PIN), ISR_enc4, RISING);
+}
+
+// Encoder reading functions (cumulative)
+long getM1Encoder() {
+  long temp;
+  noInterrupts();
+  temp = encCount1;
+  interrupts();
+  return temp;
+}
+
+long getM2Encoder() {
+  long temp;
+  noInterrupts();
+  temp = encCount2;
+  interrupts();
+  return -temp; // Invert for Front Right
+}
+
+long getM3Encoder() {
+  long temp;
+  noInterrupts();
+  temp = encCount3;
+  interrupts();
+  return temp;
+}
+
+long getM4Encoder() {
+  long temp;
+  noInterrupts();
+  temp = encCount4;
+  interrupts();
+  return -temp; // Invert for Rear Right
+}
+
+
 void resetEncoders() {
-  resetEncoder(LEFT);
-  resetEncoder(RIGHT);
+  noInterrupts();
+  encCount1 = 0;
+  encCount2 = 0;
+  encCount3 = 0;
+  encCount4 = 0;
+  interrupts();
 }
 
 #endif

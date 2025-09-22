@@ -86,6 +86,8 @@
 /* Include configuration parameters */
 #include "config.h"
 #include "sensors.h"
+#include "encoder_driver.h"
+
 
 /* Sensor functions */
 #include "sensors.h"
@@ -143,7 +145,7 @@ long arg2;
 
 /* Clear the current command parameters */
 void resetCommand() {
-  cmd = NULL;
+  cmd = 0;
   memset(argv1, 0, sizeof(argv1));
   memset(argv2, 0, sizeof(argv2));
   arg1 = 0;
@@ -199,12 +201,8 @@ int runCommand() {
 #endif
     
 #ifdef USE_BASE
-  case READ_ENCODERS:
-    // For 4-motor config, print all encoder values
-    Serial.print(readEncoder(0)); Serial.print(" ");
-    Serial.print(readEncoder(1)); Serial.print(" ");
-    Serial.print(readEncoder(2)); Serial.print(" ");
-    Serial.println(readEncoder(3));
+case READ_ENCODERS:
+    printAllEncoders();
     break;
    case RESET_ENCODERS:
     resetEncoders();
@@ -277,25 +275,27 @@ void setup() {
 #ifdef USE_BASE
   #ifdef ARDUINO_ENC_COUNTER
     //set as inputs
-    DDRD &= ~(1<<LEFT_ENC_PIN_A);
-    DDRD &= ~(1<<LEFT_ENC_PIN_B);
-    DDRC &= ~(1<<RIGHT_ENC_PIN_A);
-    DDRC &= ~(1<<RIGHT_ENC_PIN_B);
+    // DDRD &= ~(1<<LEFT_ENC_PIN_A);
+    // DDRD &= ~(1<<LEFT_ENC_PIN_B);
+    // DDRC &= ~(1<<RIGHT_ENC_PIN_A);
+    // DDRC &= ~(1<<RIGHT_ENC_PIN_B);
     
-    //enable pull up resistors
-    PORTD |= (1<<LEFT_ENC_PIN_A);
-    PORTD |= (1<<LEFT_ENC_PIN_B);
-    PORTC |= (1<<RIGHT_ENC_PIN_A);
-    PORTC |= (1<<RIGHT_ENC_PIN_B);
+    // //enable pull up resistors
+    // PORTD |= (1<<LEFT_ENC_PIN_A);
+    // PORTD |= (1<<LEFT_ENC_PIN_B);
+    // PORTC |= (1<<RIGHT_ENC_PIN_A);
+    // PORTC |= (1<<RIGHT_ENC_PIN_B);
     
-    // tell pin change mask to listen to left encoder pins
-    PCMSK2 |= (1 << LEFT_ENC_PIN_A)|(1 << LEFT_ENC_PIN_B);
-    // tell pin change mask to listen to right encoder pins
-    PCMSK1 |= (1 << RIGHT_ENC_PIN_A)|(1 << RIGHT_ENC_PIN_B);
+    // // tell pin change mask to listen to left encoder pins
+    // PCMSK2 |= (1 << LEFT_ENC_PIN_A)|(1 << LEFT_ENC_PIN_B);
+    // // tell pin change mask to listen to right encoder pins
+    // PCMSK1 |= (1 << RIGHT_ENC_PIN_A)|(1 << RIGHT_ENC_PIN_B);
     
-    // enable PCINT1 and PCINT2 interrupt in the general interrupt mask
-    PCICR |= (1 << PCIE1) | (1 << PCIE2);
+    // // enable PCINT1 and PCINT2 interrupt in the general interrupt mask
+    // PCICR |= (1 << PCIE1) | (1 << PCIE2);
   #endif
+
+  initializeEncoders();
   initMotorControllerTB6612();
   resetPID();
 #endif
@@ -316,8 +316,8 @@ void loop() {
 
     // Terminate a command with a CR
     if (chr == 13) {
-      if (arg == 1) argv1[index] = NULL;
-      else if (arg == 2) argv2[index] = NULL;
+      if (arg == 1) argv1[index] = 0;
+      else if (arg == 2) argv2[index] = 0;
       runCommand();
       resetCommand();
     }
@@ -326,7 +326,7 @@ void loop() {
       // Step through the arguments
       if (arg == 0) arg = 1;
       else if (arg == 1)  {
-        argv1[index] = NULL;
+        argv1[index] = 0;
         arg = 2;
         index = 0;
       }
@@ -366,3 +366,12 @@ void loop() {
   sweepAllServos();
 #endif
 }
+
+
+void printAllEncoders() {
+    Serial.print(getM1Encoder()); Serial.print(" ");
+    Serial.print(getM2Encoder()); Serial.print(" ");
+    Serial.print(getM3Encoder()); Serial.print(" ");
+    Serial.println(getM4Encoder());
+}
+

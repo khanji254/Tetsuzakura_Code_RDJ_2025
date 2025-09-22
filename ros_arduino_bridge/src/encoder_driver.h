@@ -1,23 +1,26 @@
-/*************************************************************
-   Encoder driver function definitions for 4-motor TB6612 config
-   *************************************************************/
+#ifndef ENCODER_DRIVER_H
+#define ENCODER_DRIVER_H
 
+#include <Arduino.h>
 #include "config.h"
 
-// Encoder pin mapping for 4 motors (from config.h)
-#define FRONT_LEFT_ENC_A   ENC1_A_PIN
-#define FRONT_LEFT_ENC_B   ENC1_B_PIN
+// Encoder count variables
+extern volatile long encCount1, encCount2, encCount3, encCount4;
 
-#define FRONT_RIGHT_ENC_A  ENC2_A_PIN
-#define FRONT_RIGHT_ENC_B  ENC2_B_PIN
+// Initialization and ISR prototypes
+void initializeEncoders();
+void ISR_enc1();
+void ISR_enc2();
+void ISR_enc3();
+void ISR_enc4();
 
-#define REAR_LEFT_ENC_A    ENC3_A_PIN
-#define REAR_LEFT_ENC_B    ENC3_B_PIN
+// Encoder reading functions (cumulative)
+long getM1Encoder();
+long getM2Encoder();
+long getM3Encoder();
+long getM4Encoder();
 
-#define REAR_RIGHT_ENC_A   ENC4_A_PIN
-#define REAR_RIGHT_ENC_B   ENC4_B_PIN
-
-// Function prototypes
-long readEncoder(int i);
-void resetEncoder(int i);
+// Reset all encoder counts to zero
 void resetEncoders();
+
+#endif // ENCODER_DRIVER_H
