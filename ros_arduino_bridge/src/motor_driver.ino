@@ -1,12 +1,12 @@
 /***************************************************************
    Motor driver definitions for TB6612
    *************************************************************/
-#define TB6612_MOTOR_DRIVER
+//#define TB6612_MOTOR_DRIVER
 
 
-#ifdef USE_BASE
+//#ifdef USE_BASE
 
-#ifdef TB6612_MOTOR_DRIVER
+//#ifdef TB6612_MOTOR_DRIVER
 
 #include "config.h"
 
@@ -53,6 +53,6 @@ void setMotorSpeedsTB6612(int flSpeed, int frSpeed, int rlSpeed, int rrSpeed) {
   setMotorSpeedTB6612(3, rrSpeed);
 }
 
-#endif // TB6612_MOTOR_DRIVER
+//#endif // TB6612_MOTOR_DRIVER
 
-#endif // USE_BASE
+//#endif // USE_BASE

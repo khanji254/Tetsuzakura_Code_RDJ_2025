@@ -28,8 +28,8 @@
 
 // Motor 4 (Rear Right - Motor B)
 #define M4_PWM   9    // ENB pin (speed control)
-#define M4_IN1   28   // IN3 pin -> OUT3
-#define M4_IN2   29   // IN4 pin -> OUT4
+#define M4_IN1   29   // IN3 pin -> OUT3
+#define M4_IN2   28   // IN4 pin -> OUT4
 
 #define MOTOR_STBY 40   // HIGH = enable TB6612 
                        

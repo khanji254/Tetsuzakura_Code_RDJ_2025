@@ -162,7 +162,7 @@ int runCommand() {
   int pid_args[4];
   arg1 = atoi(argv1);
   arg2 = atoi(argv2);
-  
+
   switch(cmd) {
   case GET_BAUDRATE:
     Serial.println(BAUDRATE);
@@ -199,59 +199,59 @@ int runCommand() {
     Serial.println(servos[arg1].getServo().read());
     break;
 #endif
-    
+
 #ifdef USE_BASE
-case READ_ENCODERS:
+  case READ_ENCODERS:
     printAllEncoders();
     break;
-   case RESET_ENCODERS:
+  case RESET_ENCODERS:
     resetEncoders();
     resetPID();
     Serial.println("OK");
     break;
   case MOTOR_SPEEDS:
-    /* Reset the auto stop timer */
-    lastMotorCommand = millis();
-    // For 4-motor config, expects speeds for all motors (space separated)
-    // Example: m 100 100 100 100
+  case MOTOR_RAW_PWM:
     {
+      /* Reset the auto stop timer */
+      lastMotorCommand = millis();
       int speeds[4] = {0, 0, 0, 0};
-      speeds[0] = arg1;
-      speeds[1] = arg2;
-      // Parse next two speeds from serial
-      int idx = 2;
-      while (idx < 4 && Serial.available() > 0) {
-        char buf[8] = {0};
-        int bidx = 0;
-        char c;
-        // Skip spaces
-        while (Serial.available() > 0 && (c = Serial.peek()) == ' ') {
-          Serial.read();
+      // Combine argv1 and argv2 and read the rest of the line
+      char args[32] = {0};
+      strncpy(args, argv1, sizeof(args) - 1);
+      if (strlen(argv2) > 0) {
+        strncat(args, ":", sizeof(args) - strlen(args) - 1);
+        strncat(args, argv2, sizeof(args) - strlen(args) - 1);
+      }
+      // Read the rest of the line if available
+      while (Serial.available() > 0 && strlen(args) < sizeof(args) - 1) {
+        char c = Serial.read();
+        if (c == 13 || c == '\n' || c == '\r') break;
+        strncat(args, &c, 1);
+      }
+      // Try splitting on ':'
+      char *q = args;
+      int idx = 0;
+      while ((str = strtok_r(q, ":", &q)) && idx < 4) {
+        speeds[idx++] = atoi(str);
+      }
+      // If not enough values, try splitting on spaces
+      if (idx < 4) {
+        q = args;
+        idx = 0;
+        while ((str = strtok_r(q, " ", &q)) && idx < 4) {
+          speeds[idx++] = atoi(str);
         }
-        // Read number
-        while (Serial.available() > 0 && bidx < 7) {
-          c = Serial.read();
-          if (c == 13 || c == ' ') break;
-          buf[bidx++] = c;
-        }
-        buf[bidx] = 0;
-        speeds[idx] = atoi(buf);
-        idx++;
       }
       setMotorSpeedsTB6612(speeds[0], speeds[1], speeds[2], speeds[3]);
       Serial.println("OK");
+      if (cmd == MOTOR_RAW_PWM) {
+        resetPID();
+        moving = 0;
+      }
     }
     break;
-  case MOTOR_RAW_PWM:
-    /* Reset the auto stop timer */
-    lastMotorCommand = millis();
-    resetPID();
-    moving = 0; // Sneaky way to temporarily disable the PID
-    setMotorSpeedsTB6612(arg1, arg2, 0, 0); // For 4-motor, expand as needed
-    Serial.println("OK"); 
-    break;
   case UPDATE_PID:
-    while ((str = strtok_r(p, ":", &p)) != '\0') {
+    while ((str = strtok_r(p, ":", &p)) != nullptr) {
        pid_args[i] = atoi(str);
        i++;
     }
@@ -266,12 +266,17 @@ case READ_ENCODERS:
     Serial.println("Invalid Command");
     break;
   }
+  return 0;
 }
 
 /* Setup function--runs once at startup. */
 void setup() {
   Serial.begin(BAUDRATE);
-
+  pinMode(MOTOR_STBY, OUTPUT);
+  digitalWrite(MOTOR_STBY, HIGH);
+  setMotorSpeedsTB6612(100, 100, 100, 100);
+  delay(2000);
+  setMotorSpeedsTB6612(0, 0, 0, 0);  
 #ifdef USE_BASE
   #ifdef ARDUINO_ENC_COUNTER
     //set as inputs
