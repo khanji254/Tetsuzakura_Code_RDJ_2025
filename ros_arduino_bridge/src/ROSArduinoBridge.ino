@@ -87,7 +87,7 @@
 #include "config.h"
 #include "sensors.h"
 #include "encoder_driver.h"
-
+#include "stepper_driver.h"
 
 /* Sensor functions */
 #include "sensors.h"
@@ -250,6 +250,24 @@ int runCommand() {
       }
     }
     break;
+    case STEPPER: {
+        // Example: q -25:400:0
+        int rpm = 0, distance = 0, flag = 0;
+        char *p = argv1;
+        char *str;
+        int params[3] = {0, 0, 0};
+        int idx = 0;
+        // Parse colon-separated values
+        while ((str = strtok_r(p, ":", &p)) && idx < 3) {
+            params[idx++] = atoi(str);
+        }
+        rpm = params[0];
+        distance = params[1];
+        flag = params[2];
+        handleStepperCommand(rpm, distance, flag);
+        Serial.println("OK");
+        break;
+    }    
   case UPDATE_PID:
     while ((str = strtok_r(p, ":", &p)) != nullptr) {
        pid_args[i] = atoi(str);
@@ -274,9 +292,9 @@ void setup() {
   Serial.begin(BAUDRATE);
   pinMode(MOTOR_STBY, OUTPUT);
   digitalWrite(MOTOR_STBY, HIGH);
-  setMotorSpeedsTB6612(100, 100, 100, 100);
-  delay(2000);
-  setMotorSpeedsTB6612(0, 0, 0, 0);  
+  //setMotorSpeedsTB6612(100, 100, 100, 100);
+  //delay(2000);
+  //setMotorSpeedsTB6612(0, 0, 0, 0);  
 #ifdef USE_BASE
   #ifdef ARDUINO_ENC_COUNTER
     //set as inputs
@@ -303,6 +321,7 @@ void setup() {
   initializeEncoders();
   initMotorControllerTB6612();
   resetPID();
+  initializeStepper();
 #endif
 
 #ifdef USE_SERVOS
@@ -353,6 +372,8 @@ void loop() {
       }
     }
   }
+  runStepper();
+
   
 #ifdef USE_BASE
   if (millis() > nextPID) {

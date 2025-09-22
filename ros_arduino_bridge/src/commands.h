@@ -12,7 +12,8 @@
 #define READ_ENCODERS      'e'
 #define MOTOR_SPEEDS       'm'  // Set all 4 motor speeds
 #define MOTOR_RAW_PWM      'o'
-#define PING_BOT               'p'
+#define PING_BOT           'p'
+#define STEPPER           'q'
 #define RESET_ENCODERS     'r'
 #define SERVO_WRITE        's'
 #define SERVO_READ         't'

@@ -61,11 +61,15 @@
 #define CAMERA_SERVO_PIN      52    // Camera tilt servo
 #define TIPPER_SERVO_PIN      44    // Tipper servo
 
-// Stepper Motor Pins (ULN2003AN) - Distance-based control
+// Stepper Motor - Distance-based control
 #define STEPPER_IN1_PIN       45
 #define STEPPER_IN2_PIN       47  
 #define STEPPER_IN3_PIN       49
 #define STEPPER_IN4_PIN       51
+#define STEPPER_STEPS_PER_REV 2048  // 28BYJ-48: 32 steps * 64:1 gear ratio = 2048 steps/rev
+#define PULLEY_DIAMETER_MM    30.0
+#define PULLEY_CIRCUM_MM      (PI * PULLEY_DIAMETER_MM)
+
 
 // Motor Configuration
 #define MOTOR_MAX_SPEED       255
