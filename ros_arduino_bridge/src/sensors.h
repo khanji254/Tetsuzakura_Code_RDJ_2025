@@ -10,5 +10,7 @@ long Ping(int trigPin, int echoPin);
 // Color sensor
 void initializeColorSensor();
 void readColorSensor();
+void colorSensorLEDOn();
+void colorSensorLEDOff();
 
 #endif // SENSORS_H

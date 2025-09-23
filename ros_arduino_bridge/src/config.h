@@ -18,8 +18,8 @@
 
 // Motor 2 (Front Right) - TB6612  d
 #define M2_PWM   5
-#define M2_IN1   24
-#define M2_IN2   25
+#define M2_IN1   25
+#define M2_IN2   24
 
 // Motor 3 (Rear Left - Motor A) 
 #define M3_PWM   6    // ENA pin (speed control)
@@ -44,7 +44,7 @@
 #define ENC3_B_PIN 32
 
 #define ENC4_A_PIN 3  //b
-#define ENC4_B_PIN 31
+#define ENC4_B_PIN 34
 
 // Ultrasonic Sensors (4 sensors for comprehensive mapping during skidding)
 #define ULTRASONIC_LEFT_TRIG_PIN      A6   // Left side trigger

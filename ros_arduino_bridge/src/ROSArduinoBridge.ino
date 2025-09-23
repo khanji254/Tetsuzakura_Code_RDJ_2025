@@ -293,7 +293,15 @@ int runCommand() {
         break;
     }  
     case COLOR_READ: // Color sensor command
+    if (argv1[0] == '0') {
+        colorSensorLEDOff();
         readColorSensor();
+    } else if (argv1[0] == '1') {
+        colorSensorLEDOn();
+        readColorSensor();
+    } else {
+        readColorSensor();
+    }
         break;
     case ULTRASONIC_READ: // Ultrasonic sensor command, returns both left and right in cm
      {
@@ -325,6 +333,7 @@ int runCommand() {
 /* Setup function--runs once at startup. */
 void setup() {
   Serial.begin(BAUDRATE);
+
   pinMode(MOTOR_STBY, OUTPUT);
   digitalWrite(MOTOR_STBY, HIGH);
   //setMotorSpeedsTB6612(100, 100, 100, 100);

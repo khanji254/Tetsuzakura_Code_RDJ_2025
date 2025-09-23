@@ -25,12 +25,17 @@ String inputBuffer = "";
 void setup() {
   Serial.begin(115200);
   Serial.println("Send command: q <rpm>:<distance_mm>:<flag>");
-  stepper.setMaxSpeed(340); // ~10 RPM (2048 steps/rev * 10 / 60)
-  stepper.setAcceleration(200); // steps/sec^2
+  stepper.setMaxSpeed(150);       // Lowered for reliability (~4.4 RPM)
+  stepper.setAcceleration(60);    // Lowered for reliability
 }
 
 void loop() {
   stepper.run(); // Non-blocking stepper update
+
+  // Disable outputs when not moving to prevent heating
+  if (!stepper.isRunning()) {
+    stepper.disableOutputs();
+  }
 
   // Read serial input
   while (Serial.available()) {
@@ -62,10 +67,11 @@ void processCommand(const String& cmd) {
         // Return to original position (zero) at 20 RPM using relative move
         float returnRPM = 20.0;
         float returnSpeed = returnRPM * STEPPER_STEPS_PER_REV / 60.0; // steps/sec
-        stepper.setAcceleration(80); // Lower acceleration for reliability
+        stepper.setAcceleration(60); // Lower acceleration for reliability
         stepper.setMaxSpeed(returnSpeed);
         long stepsToZero = -stepper.currentPosition();
         if (stepsToZero != 0) {
+          stepper.enableOutputs();
           stepper.move(stepsToZero);
           Serial.print("Stepper: Returning to zero position at 20 RPM, steps: ");
           Serial.println(stepsToZero);
@@ -80,8 +86,9 @@ void processCommand(const String& cmd) {
 
         // Set speed and move
         float moveSpeed = abs(rpm) * STEPPER_STEPS_PER_REV / 60.0;
-        stepper.setAcceleration(80); // Lower acceleration for reliability
+        stepper.setAcceleration(60); // Lower acceleration for reliability
         stepper.setMaxSpeed(moveSpeed);
+        stepper.enableOutputs();
         stepper.move((rpm >= 0) ? steps : -steps);
 
         Serial.print("Stepper: rpm=");
