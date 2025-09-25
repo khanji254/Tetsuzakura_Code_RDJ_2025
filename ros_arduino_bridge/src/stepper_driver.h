@@ -6,5 +6,5 @@
 void initializeStepper();
 void handleStepperCommand(int rpm, int distance_mm, int flag);
 void runStepper();
-
+bool isStepperActive();
 #endif

@@ -20,6 +20,7 @@
 #define RESET_ENCODERS     'r'
 #define SERVO_WRITE        's'
 #define SERVO_READ         't'
+#define GET_ROBOT_STATE    'y'  // Get current robot state
 #define UPDATE_PID         'u'
 #define DIGITAL_WRITE      'w'
 #define ANALOG_WRITE       'x'

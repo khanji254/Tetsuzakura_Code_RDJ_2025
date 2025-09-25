@@ -22,10 +22,12 @@ long Ping(int trigPin, int echoPin) {
   range = duration / 58; // Use the same conversion as your working code
 
   // Debug print
-  Serial.print("Ping trig: "); Serial.print(trigPin);
-  Serial.print(" echo: "); Serial.print(echoPin);
-  Serial.print(" duration: "); Serial.print(duration);
-  Serial.print(" range: "); Serial.println(range);
+  //Serial.print("Ping trig: "); 
+   Serial.print(trigPin);
+ // Serial.print(" echo: "); 
+   Serial.print(echoPin);
+ // Serial.print(" duration: "); Serial.print(duration);
+ // Serial.print(" range: "); Serial.println(range);
 
   return range;
   //delay(500); // Short delay to avoid sensor interference
@@ -36,11 +38,11 @@ Adafruit_TCS34725 tcs = Adafruit_TCS34725(
 
 void initializeColorSensor() {
   if (tcs.begin()) {
-    Serial.println("TCS34725 found");
+    //Serial.println("TCS34725 found");
     pinMode(TCS34725_LED_PIN, OUTPUT);
     digitalWrite(TCS34725_LED_PIN, LOW); // Turn on LED
   } else {
-    Serial.println("No TCS34725 found ... check your wiring!");
+    //Serial.println("No TCS34725 found ... check your wiring!");
   }
 }
 

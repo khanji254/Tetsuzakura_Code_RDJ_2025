@@ -7,6 +7,17 @@ AccelStepper stepper(
     STEPPER_IN1_PIN, STEPPER_IN3_PIN, STEPPER_IN2_PIN, STEPPER_IN4_PIN
 );
 
+bool isStepperActive() {
+  // Return true if stepper is currently moving
+  // This depends on your stepper library - here's a generic implementation:
+  #ifdef USE_STEPPER
+    return (stepper.distanceToGo() != 0); // For AccelStepper library
+  #else
+    return false;
+  #endif
+}
+
+
 void initializeStepper() {
     stepper.setMaxSpeed(340); // ~10 RPM
     stepper.setAcceleration(200);

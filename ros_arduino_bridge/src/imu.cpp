@@ -18,13 +18,13 @@ void initializeIMU() {
     Wire.begin();
     Wire.setClock(400000);
 
-    Serial.println(F("Initializing I2C devices..."));
+    //Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
 
-    Serial.println(F("Testing device connections..."));
+    //Serial.println(F("Testing device connections..."));
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
-    Serial.println(F("Initializing DMP..."));
+    //Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
     mpu.setXGyroOffset(220);
@@ -36,16 +36,16 @@ void initializeIMU() {
         mpu.CalibrateAccel(6);
         mpu.CalibrateGyro(6);
         mpu.PrintActiveOffsets();
-        Serial.println(F("Enabling DMP..."));
+        //Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
 
         dmpReady = true;
         packetSize = mpu.dmpGetFIFOPacketSize();
-        Serial.println(F("DMP ready!"));
+        //Serial.println(F("DMP ready!"));
     } else {
-        Serial.print(F("DMP Initialization failed (code "));
+        //Serial.print(F("DMP Initialization failed (code "));
         Serial.print(devStatus);
-        Serial.println(F(")"));
+        //Serial.println(F(")"));
     }
 }
 

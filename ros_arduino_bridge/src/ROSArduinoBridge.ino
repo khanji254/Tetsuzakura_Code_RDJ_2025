@@ -25,7 +25,7 @@
     are met:
 
      * Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
+       notice, this list of conditions and the following discla                   
      * Redistributions in binary form must reproduce the above
        copyright notice, this list of conditions and the following
        disclaimer in the documentation and/or other materials provided
@@ -46,7 +46,7 @@
  *********************************************************************/
 
 #define USE_BASE      // Enable the base controller code
-
+#define USE_STEPPER      // Enable the IMU code if an IMU is connected
 /* Define the motor controller and encoder library you are using */
 #ifdef USE_BASE
    /* The Pololu VNH5019 dual motor driver shield */
@@ -81,7 +81,6 @@
 
 /* Include definition of serial commands */
 #include "commands.h"
-
 
 /* Include configuration parameters */
 #include "config.h"
@@ -123,6 +122,96 @@
   #define AUTO_STOP_INTERVAL 2000
   long lastMotorCommand = AUTO_STOP_INTERVAL;
 #endif
+
+/* State Machine Definitions */
+typedef enum {
+  STATE_OFFLOADING,   // Offloading state - minimal data transmission
+  STATE_MOVING,       // Moving state - send all sensor data
+  STATE_STATIONARY    // Stationary state - limited data transmission
+} RobotState;
+
+// Current state variable
+RobotState currentState = STATE_STATIONARY;
+
+// State detection variables
+bool motorMoving = false;
+bool offloadingActive = false;
+unsigned long lastMovementTime = 0;
+unsigned long lastStepperActivity = 0;
+#define MOVEMENT_THRESHOLD 5        // Minimum encoder count change to consider moving
+#define STATIONARY_TIME_MS 500      // Time without movement to be considered stationary
+#define STEPPER_ACTIVITY_TIMEOUT 3000 // Time after stepper activity to consider offloading
+
+// Previous encoder values for movement detection
+long lastM1 = 0, lastM2 = 0, lastM3 = 0, lastM4 = 0;
+
+/* State Machine Functions */
+void updateStateMachine() {
+  // Check for stepper activity (offloading)
+  if (isStepperActive()) {
+    lastStepperActivity = millis();
+    offloadingActive = true;
+  }
+  
+  // Check if we're still in offloading state (within timeout after stepper activity)
+  if (offloadingActive && (millis() - lastStepperActivity < STEPPER_ACTIVITY_TIMEOUT)) {
+    currentState = STATE_OFFLOADING;
+    return;
+  } else {
+    offloadingActive = false;
+  }
+  
+  // Check if motors are moving by comparing encoder values
+  long currentM1 = getM1Encoder();
+  long currentM2 = getM2Encoder();
+  long currentM3 = getM3Encoder();
+  long currentM4 = getM4Encoder();
+  
+  // Check if any encoder has changed significantly
+  bool encodersMoving = (abs(currentM1 - lastM1) > MOVEMENT_THRESHOLD) ||
+                       (abs(currentM2 - lastM2) > MOVEMENT_THRESHOLD) ||
+                       (abs(currentM3 - lastM3) > MOVEMENT_THRESHOLD) ||
+                       (abs(currentM4 - lastM4) > MOVEMENT_THRESHOLD);
+  
+  if (encodersMoving) {
+    motorMoving = true;
+    lastMovementTime = millis();
+  } else if (motorMoving && (millis() - lastMovementTime > STATIONARY_TIME_MS)) {
+    motorMoving = false;
+  }
+  
+  // Update state based on movement
+  if (motorMoving) {
+    currentState = STATE_MOVING;
+  } else {
+    currentState = STATE_STATIONARY;
+  }
+  
+  // Save current encoder values for next comparison
+  lastM1 = currentM1;
+  lastM2 = currentM2;
+  lastM3 = currentM3;
+  lastM4 = currentM4;
+}
+
+/* Data Transmission Control Functions */
+bool shouldSendOdometry() {
+  return currentState == STATE_MOVING;  // Only send odometry when moving
+}
+
+bool shouldSendIMUData() {
+  return currentState == STATE_MOVING;  // Only send IMU data when moving
+}
+
+bool shouldSendEncoderData() {
+  // Send encoder data in all states except offloading
+  return currentState != STATE_OFFLOADING;
+}
+
+bool shouldSendSensorData() {
+  // Send sensor data in all states except offloading
+  return currentState != STATE_OFFLOADING;
+}
 
 /* Variable initialization */
 
@@ -222,11 +311,16 @@ int runCommand() {
 
 #ifdef USE_BASE
   case READ_ENCODERS:
-    printAllEncoders();
+    if (shouldSendEncoderData()) {
+      printAllEncoders();
+    }
+    // Don't send anything if encoders shouldn't transmit
     break;
   case RESET_ENCODERS:
     resetEncoders();
     resetPID();
+    // Reset movement detection variables
+    lastM1 = lastM2 = lastM3 = lastM4 = 0;
     Serial.println("OK");
     break;
   case MOTOR_SPEEDS:
@@ -271,7 +365,10 @@ int runCommand() {
     }
     break;
     case GET_IMU_ANGLE: // IMU Z angle command
-       Serial.println(readIMUZAngle());
+       if (shouldSendIMUData()) {
+         Serial.println(readIMUZAngle());
+       }
+       // Don't send anything if IMU shouldn't transmit
      break;
 
     case STEPPER: {
@@ -293,23 +390,28 @@ int runCommand() {
         break;
     }  
     case COLOR_READ: // Color sensor command
-    if (argv1[0] == '0') {
-        colorSensorLEDOff();
-        readColorSensor();
-    } else if (argv1[0] == '1') {
-        colorSensorLEDOn();
-        readColorSensor();
-    } else {
-        readColorSensor();
+    if (shouldSendSensorData()) {
+        if (argv1[0] == '0') {
+            colorSensorLEDOff();
+            readColorSensor();
+        } else if (argv1[0] == '1') {
+            colorSensorLEDOn();
+            readColorSensor();
+        } else {
+            readColorSensor();
+        }
     }
-        break;
-    case ULTRASONIC_READ: // Ultrasonic sensor command, returns both left and right in cm
-     {
-    long left = Ping(ULTRASONIC_LEFT_TRIG_PIN, ULTRASONIC_LEFT_ECHO_PIN);
-    long right = Ping(ULTRASONIC_RIGHT_TRIG_PIN, ULTRASONIC_RIGHT_ECHO_PIN);
-    Serial.print(left); Serial.print(" "); Serial.println(right);
+    // Don't send anything if sensors shouldn't transmit
     break;
-    }
+    
+    case ULTRASONIC_READ: // Ultrasonic sensor command, returns both left and right in cm
+     if (shouldSendSensorData()) {
+        long left = Ping(ULTRASONIC_LEFT_TRIG_PIN, ULTRASONIC_LEFT_ECHO_PIN);
+        long right = Ping(ULTRASONIC_RIGHT_TRIG_PIN, ULTRASONIC_RIGHT_ECHO_PIN);
+        Serial.print(left); Serial.print(" "); Serial.println(right);
+     }
+     // Don't send anything if sensors shouldn't transmit
+    break;
     
   case UPDATE_PID:
     while ((str = strtok_r(p, ":", &p)) != nullptr) {
@@ -322,6 +424,10 @@ int runCommand() {
     Ko = pid_args[3];
     Serial.println("OK");
     break;
+
+  case GET_ROBOT_STATE:
+    Serial.println(currentState);
+    break;
 #endif
   default:
     Serial.println("Invalid Command");
@@ -330,10 +436,18 @@ int runCommand() {
   return 0;
 }
 
+void printAllEncoders() {
+    Serial.print(getM1Encoder()); Serial.print(" ");
+    Serial.print(getM2Encoder()); Serial.print(" ");
+    Serial.print(getM3Encoder()); Serial.print(" ");
+    Serial.println(getM4Encoder());
+}
+
 /* Setup function--runs once at startup. */
 void setup() {
-  Serial.begin(BAUDRATE);
 
+  Serial.begin(BAUDRATE);
+  //Serial.println("ROSArduinoBridge Ready");
   pinMode(MOTOR_STBY, OUTPUT);
   digitalWrite(MOTOR_STBY, HIGH);
   //setMotorSpeedsTB6612(100, 100, 100, 100);
@@ -368,6 +482,12 @@ void setup() {
   resetPID();
   initializeIMU();
   initializeStepper();
+  
+  // Initialize encoder values for movement detection
+  lastM1 = getM1Encoder();
+  lastM2 = getM2Encoder();
+  lastM3 = getM3Encoder();
+  lastM4 = getM4Encoder();
 #endif
 
 #ifdef USE_SERVOS
@@ -418,32 +538,29 @@ void loop() {
       }
     }
   }
+  
+  // Update the state machine first
+  updateStateMachine();
+  
   runStepper();
-
   
 #ifdef USE_BASE
   if (millis() > nextPID) {
-    updatePID();
+    // Only update PID if we should be processing odometry
+    if (shouldSendOdometry()) {
+      updatePID();
+    }
     nextPID += PID_INTERVAL;
   }
   
   // Check to see if we have exceeded the auto-stop interval
-  if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {
-    setMotorSpeedsTB6612(0, 0, 0, 0);
-    moving = 0;
-  }
+  //if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {
+    //setMotorSpeedsTB6612(0, 0, 0, 0);
+    //moving = 0;
+ //}
 #endif
 
 #ifdef USE_SERVOS
   sweepAllServos();
 #endif
 }
-
-
-void printAllEncoders() {
-    Serial.print(getM1Encoder()); Serial.print(" ");
-    Serial.print(getM2Encoder()); Serial.print(" ");
-    Serial.print(getM3Encoder()); Serial.print(" ");
-    Serial.println(getM4Encoder());
-}
-

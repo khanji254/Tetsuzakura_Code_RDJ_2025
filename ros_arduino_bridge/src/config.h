@@ -49,8 +49,8 @@
 // Ultrasonic Sensors (4 sensors for comprehensive mapping during skidding)
 #define ULTRASONIC_LEFT_TRIG_PIN      A6   // Left side trigger
 #define ULTRASONIC_LEFT_ECHO_PIN      A4   // Left side echo
-#define ULTRASONIC_RIGHT_TRIG_PIN     A7   // Right side trigger  
-#define ULTRASONIC_RIGHT_ECHO_PIN     A5   // Right side echo
+#define ULTRASONIC_RIGHT_TRIG_PIN      8   // Right side trigger  
+#define ULTRASONIC_RIGHT_ECHO_PIN     11   // Right side echo
 
 
 // I2C Sensors (SDA=20, SCL=21)
@@ -136,4 +136,4 @@ const float DIST_PER_TICK = (2.0 * PI_F * WHEEL_RADIUS) / (PULSES_PER_REV * GEAR
 // Odometry update interval (high frequency for ROS)
 const unsigned long ODOM_MS = 10;  // 100Hz for precise ROS integration
 
-#endif // CONFIG_H
+#endif // CONFIGH

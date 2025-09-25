@@ -18,7 +18,7 @@ int stepDelay [N_SERVOS] = { 0, 0 }; // ms
 byte servoPins [N_SERVOS] = { CAMERA_SERVO_PIN, TIPPER_SERVO_PIN };
 
 // Initial Position
-byte servoInitPosition [N_SERVOS] = { 90, 90 }; // [0, 180] degrees
+byte servoInitPosition [N_SERVOS] = { 50, 170 }; // [0, 180] degrees
 
 class SweepServo
 {
