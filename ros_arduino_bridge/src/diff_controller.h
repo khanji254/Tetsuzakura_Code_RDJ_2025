@@ -77,34 +77,63 @@ void resetPID(){
    rrPID.ITerm = 0;
 }
 
-/* PID routine is disabled while using raw PWM mode.
- * Keep the function present but make it a no-op so callers remain valid.
- */
+/* PID routine to compute the next motor commands */
 void doPID_4motor(SetPointInfo * p) {
-  // No PID action: preserve last output and update encoder tracking
-  p->PrevInput = p->Encoder - p->PrevEnc;
+  long Perror;
+  long output;
+  int input;
+
+  input = p->Encoder - p->PrevEnc;
+  Perror = p->TargetTicksPerFrame - input;
+
+  // Dead zone: if error is very small, set it to zero to prevent jitter
+  if (abs(Perror) < MIN_ERROR_THRESHOLD) {
+    Perror = 0;
+  }
+
+  // Calculate PID output
+  output = (Kp * Perror - Kd * (input - p->PrevInput) + p->ITerm) / Ko;
   p->PrevEnc = p->Encoder;
-  // Do not modify p->output or ITerm when PID is disabled
+
+  // Add previous output for incremental control
+  output += p->output;
+  
+  // Clamp output to motor limits
+  if (output >= MOTOR_MAX_SPEED)
+    output = MOTOR_MAX_SPEED;
+  else if (output <= -MOTOR_MAX_SPEED)
+    output = -MOTOR_MAX_SPEED;
+  else {
+    // Only accumulate integral when not saturated (anti-windup)
+    p->ITerm += Ki * Perror;
+    
+    // Clamp integral term to prevent windup
+    if (p->ITerm > MAX_INTEGRAL)
+      p->ITerm = MAX_INTEGRAL;
+    else if (p->ITerm < -MAX_INTEGRAL)
+      p->ITerm = -MAX_INTEGRAL;
+  }
+
+  p->output = output;
+  p->PrevInput = input;
 }
 
-/* Read the encoder values. PID is disabled; this keeps encoder state up-to-date.
- * Motor outputs are controlled directly via setMotorSpeedsTB6612() called by command handlers.
- */
+/* Read the encoder values and call the PID routine */
 void updatePID() {
   flPID.Encoder = getM1Encoder();
   frPID.Encoder = getM2Encoder();
   rlPID.Encoder = getM3Encoder();
   rrPID.Encoder = getM4Encoder();
 
-  // If previously moving and now stopped, reset PID tracking variables
   if (!moving){
     if (flPID.PrevInput != 0 || frPID.PrevInput != 0 || rlPID.PrevInput != 0 || rrPID.PrevInput != 0) resetPID();
     return;
   }
 
-  // PID disabled: optionally update tracking but do not drive motors here
   doPID_4motor(&flPID);
   doPID_4motor(&frPID);
   doPID_4motor(&rlPID);
   doPID_4motor(&rrPID);
+
+  setMotorSpeedsTB6612(flPID.output, frPID.output, rlPID.output, rrPID.output);
 }

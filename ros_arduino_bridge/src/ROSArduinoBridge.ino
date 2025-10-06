@@ -365,12 +365,12 @@ int runCommand() {
         lastMovementTime = millis();
       }
       
+      // PID DISABLED: Both commands now use direct PWM
+      // Set motor speeds directly without PID
       setMotorSpeedsTB6612(speeds[0], speeds[1], speeds[2], speeds[3]);
+      moving = 0;  // Keep PID disabled
+      
       Serial.println("OK");
-      if (cmd == MOTOR_RAW_PWM) {
-        resetPID();
-        moving = 0;
-      }
     }
     break;
     case GET_IMU_ANGLE: // IMU full data command (i)
@@ -455,6 +455,12 @@ int runCommand() {
     Serial.println(isStepperActive());
     break;
     
+  case 'M': // Memory diagnostic
+    Serial.print(F("Free RAM: "));
+    Serial.print(freeRAM());
+    Serial.println(F(" bytes"));
+    break;
+    
   case 'F': // Force state reset (emergency)
     offloadingActive = false;
     motorMoving = false;
@@ -476,11 +482,37 @@ void printAllEncoders() {
     Serial.println(getM4Encoder());
 }
 
+/* Free RAM diagnostic function */
+int freeRAM() {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
 /* Setup function--runs once at startup. */
 void setup() {
 
   Serial.begin(BAUDRATE);
-  //Serial.println("ROSArduinoBridge Ready");
+  
+  // Detect and report reset cause
+  uint8_t mcusr_copy = MCUSR;
+  MCUSR = 0;  // Clear flags
+  
+  Serial.println(F("=== ROSArduinoBridge Starting ==="));
+  if (mcusr_copy & (1 << BORF)) Serial.println(F("[RESET] Brownout detected!"));
+  if (mcusr_copy & (1 << EXTRF)) Serial.println(F("[RESET] External reset"));
+  if (mcusr_copy & (1 << WDRF)) Serial.println(F("[RESET] Watchdog reset"));
+  if (mcusr_copy & (1 << PORF)) Serial.println(F("[RESET] Power-on reset"));
+  
+  // Report free RAM
+  Serial.print(F("[MEM] Free RAM: "));
+  Serial.print(freeRAM());
+  Serial.println(F(" bytes"));
+  
+  // Report control mode
+  Serial.println(F("[CONTROL] PID DISABLED - Using direct PWM control"));
+  Serial.println(F("[CONTROL] Commands 'm' and 'o' both use raw PWM"));
+  
   pinMode(MOTOR_STBY, OUTPUT);
   digitalWrite(MOTOR_STBY, HIGH);
   //setMotorSpeedsTB6612(100, 100, 100, 100);
@@ -567,12 +599,20 @@ void loop() {
       }
       else if (arg == 1) {
         // Subsequent arguments can be more than one character
-        argv1[index] = chr;
-        index++;
+        // Buffer overflow protection: check bounds before writing
+        if (index < (int)sizeof(argv1) - 1) {
+          argv1[index] = chr;
+          index++;
+        }
+        // Silently drop excess characters to prevent overflow
       }
       else if (arg == 2) {
-        argv2[index] = chr;
-        index++;
+        // Buffer overflow protection: check bounds before writing
+        if (index < (int)sizeof(argv2) - 1) {
+          argv2[index] = chr;
+          index++;
+        }
+        // Silently drop excess characters to prevent overflow
       }
     }
   }
@@ -583,6 +623,9 @@ void loop() {
   runStepper();
   
 #ifdef USE_BASE
+  // PID DISABLED FOR DEBUGGING
+  // Commenting out PID update - using direct PWM control only
+  /*
   if (millis() > nextPID) {
     // Always update PID unless offloading (was only when moving)
     if (shouldSendOdometry()) {
@@ -593,6 +636,7 @@ void loop() {
     }
     nextPID += PID_INTERVAL;
   }
+  */
   
   // AUTO-STOP SAFETY DISABLED (removed by user request)
   // Motors will continue running until explicitly stopped

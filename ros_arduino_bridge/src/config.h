@@ -72,6 +72,11 @@
 
 
 // Motor Configuration
+/* Define motor maximum speed (PWM range 0-255)
+ * TEMPORARY: Reduced from 255 to 180 to prevent brownout resets
+ * during teleop. Increase gradually after confirming power supply stable.
+ * If you experience resets, reduce this value further.
+ */
 #define MOTOR_MAX_SPEED       255
 #define MOTOR_MIN_SPEED       50
 
