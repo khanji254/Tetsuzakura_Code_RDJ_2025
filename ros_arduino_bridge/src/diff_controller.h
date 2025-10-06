@@ -23,11 +23,19 @@ typedef struct {
 
 SetPointInfo flPID, frPID, rlPID, rrPID;
 
-/* PID Parameters */
-int Kp = 20;
-int Kd = 12;
-int Ki = 0;
-int Ko = 50;
+/* PID Parameters - Tuned for fast-responding motors with 285 ticks/rev
+ * These values were determined through auto-tuning with step response testing
+ * Conservative gains to prevent oscillation: Kp=0.3*Ku, Ki=0.1*Kp, Kd=0.05*Kp
+ * Ko is the scaling factor for integer math (multiply float gains by Ko)
+ */
+int Kp = 30;  // Proportional gain (scaled by Ko=100)
+int Kd = 1;   // Derivative gain (scaled by Ko=100) 
+int Ki = 3;   // Integral gain (scaled by Ko=100)
+int Ko = 100; // Scaling factor for integer PID math
+
+// Anti-windup limits
+#define MAX_INTEGRAL 5000  // Maximum integral term to prevent windup
+#define MIN_ERROR_THRESHOLD 2  // Dead zone to prevent jitter when close to target
 
 unsigned char moving = 0; // is the base in motion?
 
@@ -78,16 +86,33 @@ void doPID_4motor(SetPointInfo * p) {
   input = p->Encoder - p->PrevEnc;
   Perror = p->TargetTicksPerFrame - input;
 
+  // Dead zone: if error is very small, set it to zero to prevent jitter
+  if (abs(Perror) < MIN_ERROR_THRESHOLD) {
+    Perror = 0;
+  }
+
+  // Calculate PID output
   output = (Kp * Perror - Kd * (input - p->PrevInput) + p->ITerm) / Ko;
   p->PrevEnc = p->Encoder;
 
+  // Add previous output for incremental control
   output += p->output;
+  
+  // Clamp output to motor limits
   if (output >= MOTOR_MAX_SPEED)
     output = MOTOR_MAX_SPEED;
   else if (output <= -MOTOR_MAX_SPEED)
     output = -MOTOR_MAX_SPEED;
-  else
+  else {
+    // Only accumulate integral when not saturated (anti-windup)
     p->ITerm += Ki * Perror;
+    
+    // Clamp integral term to prevent windup
+    if (p->ITerm > MAX_INTEGRAL)
+      p->ITerm = MAX_INTEGRAL;
+    else if (p->ITerm < -MAX_INTEGRAL)
+      p->ITerm = -MAX_INTEGRAL;
+  }
 
   p->output = output;
   p->PrevInput = input;

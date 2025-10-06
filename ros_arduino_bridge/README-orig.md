@@ -11,7 +11,7 @@ Directory Structure
 - `src/servos.h` / `src/servos.ino` — Servo control (camera and tipper)
 - `src/stepper_driver.h` / `src/stepper_driver.cpp` — Stepper motor control
 - `src/sensors.h` / `src/sensors.cpp` — Ultrasonic and color sensor code
-- `src/imu.h` / `src/imu.cpp` — MPU6050 IMU (Z angle)
+- `src/imu.h` / `src/imu.cpp` — MPU6050 IMU (full YPR + gyro + accel)
 - `src/README-orig.md` — This documentation
 
 Pinout Summary
@@ -63,7 +63,7 @@ All commands are single-letter, space-separated, and sent over serial (115200 ba
 | d       | d 13                  | Digital read pin 13                         |
 | e       | e                     | Read all encoders                           |
 | m       | m 100:100:100:100     | Set all 4 motor speeds                      |
-| o       | o 255:255255:255     | Set raw PWM for all motors                  |
+| o       | o 255:255255:255      | Set raw PWM for all motors                  |
 | p       | p                     | Ping (ultrasonic)                           |
 | q       | q 20:300:0            | Stepper: rpm:distance_mm:flag               |
 | q       | q 0:0:1               | Stepper: return to zero at 20 RPM           |
@@ -74,7 +74,7 @@ All commands are single-letter, space-separated, and sent over serial (115200 ba
 | t       | t 0                   | Read servo 0 angle                          |
 | w       | w 13 1                | Digital write pin 13 HIGH                   |
 | x       | x 3 128               | Analog write pin 3, value 128               |
-| z       | z                     | Get IMU Z (yaw) angle in degrees            |
+| i       | i                     | Get full IMU data: yaw pitch roll gx gy gz ax ay az |
 | r       | r                     | Reset encoders                              |
 | u       | u ...                 | Update PID params (see code)                |
 
@@ -103,9 +103,9 @@ Troubleshooting
    - Lower speed/acceleration in code if motor stalls.
    - Use `q 0:0:1` to return to home and verify movement.
 
-5. **IMU Angle Not Updating**
+5. **IMU Data Not Updating**
    - Ensure DMP is initialized (see serial output).
-   - Use `z` command only after DMP is ready.
+   - Use `i` command only after DMP is ready.
 
 6. **General Debugging**
    - Use `Serial.println()` statements in code to trace execution.

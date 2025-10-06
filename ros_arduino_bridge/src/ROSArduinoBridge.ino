@@ -108,8 +108,8 @@
   /* PID parameters and functions */
   #include "diff_controller.h"
 
-  /* Run the PID loop at 30 times per second */
-  #define PID_RATE           30     // Hz
+  /* Run the PID loop at 50 times per second */
+  #define PID_RATE           50     // Hz (increased from 30Hz for better odometry)
 
   /* Convert the rate into an interval */
   const int PID_INTERVAL = 1000 / PID_RATE;
@@ -138,9 +138,9 @@ bool motorMoving = false;
 bool offloadingActive = false;
 unsigned long lastMovementTime = 0;
 unsigned long lastStepperActivity = 0;
-#define MOVEMENT_THRESHOLD 5        // Minimum encoder count change to consider moving
+#define MOVEMENT_THRESHOLD 15       // Minimum encoder count change to consider moving (increased for mecanum stability)
 #define STATIONARY_TIME_MS 500      // Time without movement to be considered stationary
-#define STEPPER_ACTIVITY_TIMEOUT 3000 // Time after stepper activity to consider offloading
+#define STEPPER_ACTIVITY_TIMEOUT 1000 // Time after stepper activity to consider offloading (reduced from 3000ms)
 
 // Previous encoder values for movement detection
 long lastM1 = 0, lastM2 = 0, lastM3 = 0, lastM4 = 0;
@@ -196,11 +196,11 @@ void updateStateMachine() {
 
 /* Data Transmission Control Functions */
 bool shouldSendOdometry() {
-  return currentState == STATE_MOVING;  // Only send odometry when moving
+  return currentState != STATE_OFFLOADING;  // Always send unless offloading
 }
 
 bool shouldSendIMUData() {
-  return currentState == STATE_MOVING;  // Only send IMU data when moving
+  return currentState != STATE_OFFLOADING;  // Always send unless offloading
 }
 
 bool shouldSendEncoderData() {
@@ -356,6 +356,15 @@ int runCommand() {
           speeds[idx++] = atoi(str);
         }
       }
+      
+      // COMMAND-BASED MOVEMENT DETECTION
+      bool anyMotorActive = (speeds[0] != 0 || speeds[1] != 0 || 
+                            speeds[2] != 0 || speeds[3] != 0);
+      if (anyMotorActive) {
+        motorMoving = true;
+        lastMovementTime = millis();
+      }
+      
       setMotorSpeedsTB6612(speeds[0], speeds[1], speeds[2], speeds[3]);
       Serial.println("OK");
       if (cmd == MOTOR_RAW_PWM) {
@@ -364,9 +373,16 @@ int runCommand() {
       }
     }
     break;
-    case GET_IMU_ANGLE: // IMU Z angle command
+    case GET_IMU_ANGLE: // IMU full data command (i)
        if (shouldSendIMUData()) {
-         Serial.println(readIMUZAngle());
+         float imuVals[9] = {0};
+         readIMUFull(imuVals);
+         // Print values space-separated: yaw pitch roll gx gy gz ax ay az
+         for (int i = 0; i < 9; i++) {
+           if (i > 0) Serial.print(' ');
+           Serial.print(imuVals[i]);
+         }
+         Serial.println();
        }
        // Don't send anything if IMU shouldn't transmit
      break;
@@ -428,6 +444,23 @@ int runCommand() {
   case GET_ROBOT_STATE:
     Serial.println(currentState);
     break;
+    
+  /* NEW COMMANDS FOR DEBUGGING */
+  case 'D': // Debug state info
+    Serial.print("State:");
+    Serial.print(currentState);
+    Serial.print(" Moving:");
+    Serial.print(motorMoving);
+    Serial.print(" Stepper:");
+    Serial.println(isStepperActive());
+    break;
+    
+  case 'F': // Force state reset (emergency)
+    offloadingActive = false;
+    motorMoving = false;
+    currentState = STATE_STATIONARY;
+    Serial.println("State reset");
+    break;
 #endif
   default:
     Serial.println("Invalid Command");
@@ -480,7 +513,12 @@ void setup() {
   initializeColorSensor();
   initMotorControllerTB6612();
   resetPID();
-  initializeIMU();
+  
+  // Initialize IMU with timeout protection (non-blocking)
+  if (!initializeIMU()) {
+    Serial.println(F("[WARN] IMU initialization failed or timeout - robot will operate without IMU"));
+  }
+  
   initializeStepper();
   
   // Initialize encoder values for movement detection
@@ -541,23 +579,30 @@ void loop() {
   
   // Update the state machine first
   updateStateMachine();
-  
+ // printAllEncoders();
   runStepper();
   
 #ifdef USE_BASE
   if (millis() > nextPID) {
-    // Only update PID if we should be processing odometry
+    // Always update PID unless offloading (was only when moving)
     if (shouldSendOdometry()) {
       updatePID();
+    } else if (currentState == STATE_STATIONARY) {
+      // Reset PID integrators when stationary to prevent windup
+      resetPID();
     }
     nextPID += PID_INTERVAL;
   }
   
-  // Check to see if we have exceeded the auto-stop interval
-  //if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {
-    //setMotorSpeedsTB6612(0, 0, 0, 0);
-    //moving = 0;
- //}
+  // AUTO-STOP SAFETY DISABLED (removed by user request)
+  // Motors will continue running until explicitly stopped
+  /*
+  if ((millis() - lastMotorCommand) > AUTO_STOP_INTERVAL) {
+    setMotorSpeedsTB6612(0, 0, 0, 0);
+    resetPID();
+    motorMoving = false;  // Update state tracking
+  }
+  */
 #endif
 
 #ifdef USE_SERVOS

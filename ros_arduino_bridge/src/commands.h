@@ -24,7 +24,7 @@
 #define UPDATE_PID         'u'
 #define DIGITAL_WRITE      'w'
 #define ANALOG_WRITE       'x'
-#define GET_IMU_ANGLE      'z'  // New command to get IMU Z angle
+#define GET_IMU_ANGLE      'i'  // New command to get full IMU data (yaw pitch roll gyro_x gyro_y gyro_z accel_x accel_y accel_z)
 
 // Motor indices for 4-motor TB6612
 #define MOTOR_FRONT_LEFT   0

@@ -3,8 +3,8 @@
 // Pin configuration (update if needed)
 #define ULTRASONIC_LEFT_TRIG_PIN  A6
 #define ULTRASONIC_LEFT_ECHO_PIN  A4
-#define ULTRASONIC_RIGHT_TRIG_PIN A7
-#define ULTRASONIC_RIGHT_ECHO_PIN A5
+#define ULTRASONIC_RIGHT_TRIG_PIN 8
+#define ULTRASONIC_RIGHT_ECHO_PIN 11
 
 long readUltrasonicCM(uint8_t trigPin, uint8_t echoPin) {
   digitalWrite(trigPin, LOW);
